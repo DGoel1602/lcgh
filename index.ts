@@ -14,8 +14,8 @@ const GRAPHQL = "https://leetcode.com/graphql";
 const headers = {
   "Content-Type": "application/json",
   "X-CSRFToken": CSRF_TOKEN,
-  "Referer": "https://leetcode.com/",
-  "Cookie": `LEETCODE_SESSION=${LEETCODE_SESSION}; csrftoken=${CSRF_TOKEN}`,
+  Referer: "https://leetcode.com/",
+  Cookie: `LEETCODE_SESSION=${LEETCODE_SESSION}; csrftoken=${CSRF_TOKEN}`,
 };
 
 async function gql(query: string, variables: any) {
@@ -25,7 +25,7 @@ async function gql(query: string, variables: any) {
     body: JSON.stringify({ query, variables }),
   });
 
-  const json = await res.json() as any;
+  const json = (await res.json()) as any;
   if (json.errors) {
     console.error(JSON.stringify(json.errors, null, 2));
     throw new Error("GraphQL error");
@@ -114,23 +114,28 @@ query submissionDetails($submissionId: Int!) {
 
 async function getCode(id: number) {
   const data = await gql(SUBMISSION_DETAIL_QUERY, { submissionId: id });
-  return data.submissionDetails as { code: string; lang: { name: string } } | null;
+  return data.submissionDetails as {
+    code: string;
+    lang: { name: string };
+  } | null;
 }
 
 const QUESTION_QUERY = `
 query questionTitle($titleSlug: String!) {
   question(titleSlug: $titleSlug) {
     questionFrontendId
-    difficulty 
+    difficulty
   }
 }
 `;
 
-async function getQuestionInfo(slug: string): Promise<{ qid: string; difficulty: string }> {
+async function getQuestionInfo(
+  slug: string,
+): Promise<{ qid: string; difficulty: string }> {
   const data = await gql(QUESTION_QUERY, { titleSlug: slug });
   return {
     qid: data.question.questionFrontendId,
-    difficulty: data.question.difficulty.toLowerCase(), 
+    difficulty: data.question.difficulty.toLowerCase(),
   };
 }
 
@@ -184,26 +189,30 @@ export async function syncRepo() {
 
   process.chdir("../solutions");
 
-  const isGitRepo =
-    (await $`git rev-parse --is-inside-work-tree`.quiet().then(() => true, () => false));
+  const isGitRepo = await $`git rev-parse --is-inside-work-tree`.quiet().then(
+    () => true,
+    () => false,
+  );
 
   if (!isGitRepo) await $`git init`;
 
-	//Idk if we should do this but wtv
-	await $`git branch -M master`;
+  //Idk if we should do this but wtv
+  await $`git branch -M master`;
 
-  const hasOrigin =
-    (await $`git remote get-url origin`.quiet().then(() => true, () => false));
+  const hasOrigin = await $`git remote get-url origin`.quiet().then(
+    () => true,
+    () => false,
+  );
 
   if (!hasOrigin) await $`git remote add origin ${REPO_URL}`;
   else await $`git remote set-url origin ${REPO_URL}`;
 
-	try {
+  try {
     await $`git fetch origin`;
-    await $`git reset --soft origin/master`.quiet(); 
+    await $`git reset --soft origin/master`.quiet();
   } catch (e) {
     console.log("Fresh history maybe probably Im guessing");
-		console.error(e);
+    console.error(e);
   }
 
   const status = await $`git status --porcelain`.text();
