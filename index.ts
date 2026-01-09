@@ -189,11 +189,22 @@ export async function syncRepo() {
 
   if (!isGitRepo) await $`git init`;
 
+	//Idk if we should do this but wtv
+	await $`git branch -M master`;
+
   const hasOrigin =
     (await $`git remote get-url origin`.quiet().then(() => true, () => false));
 
   if (!hasOrigin) await $`git remote add origin ${REPO_URL}`;
   else await $`git remote set-url origin ${REPO_URL}`;
+
+	try {
+    await $`git fetch origin`;
+    await $`git reset --soft origin/master`.quiet(); 
+  } catch (e) {
+    console.log("Fresh history maybe probably Im guessing");
+		console.error(e);
+  }
 
   const status = await $`git status --porcelain`.text();
   const changedFiles = status.split("\n").filter((line) => line.trim() !== "");
